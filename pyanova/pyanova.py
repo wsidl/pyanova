@@ -133,7 +133,7 @@ class PyAnova(object):
         """
         self._dev = None
         self._adapter = pygatt.GATTToolBackend()
-        self._logger = DEFAULT_LOGGER
+        self._logger = logger
         if debug:
             self._logger.setLevel(logging.DEBUG)
         if auto_connect:
