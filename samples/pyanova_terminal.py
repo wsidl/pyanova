@@ -10,7 +10,11 @@
 """
 import re
 import pyanova
-from __future__ import print_function
+
+try:
+    input = raw_input
+except NameError:
+    pass
 
 if __name__ == '__main__':
     print('~~ pyanova demo ~~')
@@ -23,7 +27,7 @@ if __name__ == '__main__':
     print('-- Type commands like: \'get_current_temperature()\' or \'set_temperature(42)\'')
     print('-- Type \'bye\' to end demo')
     while True:
-        ri = raw_input('> ')
+        ri = input('> ')
         if ri.lower().startswith('bye'):
             print('cya.')
             break
