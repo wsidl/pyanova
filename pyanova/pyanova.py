@@ -48,10 +48,10 @@ READ_TIMER = "read timer"
 READ_UNIT = "read unit"
 
 # Setters
-SET_CALIBRATION_FACTOR = "cal %.1f"      # def 0.0, [-9.9, 9.9]
-SET_TARGET_TEMP = "set temp %.1f"        # [5.0C, 99,9C] | [41.0F, 211.8F]
-SET_TIMER = "set timer %d"               # in minutes, [0, 6000]
-SET_TEMP_UNIT = "set unit %s"            # 'c'|'f'
+SET_CALIBRATION_FACTOR = "cal {:.1f}"      # def 0.0, [-9.9, 9.9]
+SET_TARGET_TEMP = "set temp {:.1f}"        # [5.0C, 99,9C] | [41.0F, 211.8F]
+SET_TIMER = "set timer {:d}"               # in minutes, [0, 6000]
+SET_TEMP_UNIT = "set unit {}"            # 'c'|'f'
 
 # Controllers
 CTL_START = "start"
@@ -63,9 +63,9 @@ CTL_TIMER_STOP = "stop time"
 READ_DATE = "read date"
 CLEAR_ALARM = "clear alarm"
 GET_ID_CARD = "get id card"
-SERVER_PARA = "server para %s %d"
-SET_DEV_NAME = "set name %s"
-SET_SECRET_KEY = "set number %s"
+SERVER_PARA = "server para {} {:d}"
+SET_DEV_NAME = "set name {}"
+SET_SECRET_KEY = "set number {}"
 SET_SPEAKER_OFF = "set speaker off"
 
 # ANOVA device BLE mac pattern
@@ -79,9 +79,9 @@ DEFAULT_TIMEOUT_SEC = 10
 DEFAULT_CMD_TIMEOUT_SEC = 5
 
 # Logging format
-DEFAULT_LOGGING_FORMATER = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+DEFAULT_LOGGING_FORMATTER = logging.Formatter('{asctime} - {levelname} - {message}')
 DEFAULT_HANDLER = logging.StreamHandler()
-DEFAULT_HANDLER.setFormatter(DEFAULT_LOGGING_FORMATER)
+DEFAULT_HANDLER.setFormatter(DEFAULT_LOGGING_FORMATTER)
 DEFAULT_LOGGER = logging.getLogger('pyanova_default_logger')
 DEFAULT_LOGGER.addHandler(DEFAULT_HANDLER)
 DEFAULT_LOGGER.setLevel(logging.INFO)
@@ -145,7 +145,7 @@ class PyAnova(object):
         it calls `PyAnova.disconnect()`_ for destruction
         
         """
-        self._logger.debug('destructing PyAnova object: %s' % str(self))
+        self._logger.debug('destructing PyAnova object: {}'.format(str(self)))
         self.disconnect()
 
     def auto_connect(self, timeout=DEFAULT_TIMEOUT_SEC):
@@ -161,12 +161,12 @@ class PyAnova(object):
         
         """
         if self.is_connected():
-            errmsg = 'Already connected to a device: %s' % str(self._dev)
+            errmsg = 'Already connected to a device: {}'.format(str(self._dev))
             self._logger.error(errmsg)
             raise RuntimeError(errmsg)
-        self._logger.info('Auto connecting, timeout set to: %.2f' % timeout)
+        self._logger.info('Auto connecting, timeout set to: {:.2f}'.format(timeout))
         anova_dev_props = self.discover(timeout=timeout)
-        self._logger.debug('Found these Anova devices: %s' % str(anova_dev_props))
+        self._logger.debug('Found these Anova devices: {}'.format(str(anova_dev_props)))
         if len(anova_dev_props) < 1:
             errmsg = 'Did not find Anova device in auto discover mode.'
             self._logger.error(errmsg)
@@ -209,11 +209,11 @@ class PyAnova(object):
         """
         self._logger.info('Starting PyAnova BLE adapter')
         self._adapter.start()
-        self._logger.info('Connecting to Anova device: %s' % str(dev_prop))
+        self._logger.info('Connecting to Anova device: {}'.format(str(dev_prop)))
         self._dev = self._adapter.connect(dev_prop['address'])
-        self._logger.info('Connected to: %s' % str(dev_prop))
+        self._logger.info('Connected to: {}'.format(str(dev_prop)))
         self._dev.subscribe(notification_uuid, callback=PyAnova.indication_callback, indication=True)
-        self._logger.info('Subscribed to notification handle: %s' % notification_uuid)
+        self._logger.info('Subscribed to notification handle: {}'.format(notification_uuid))
 
     def disconnect(self):
         """This function disconnects from an existing Anova device and stops the BLE adapter
@@ -257,30 +257,30 @@ class PyAnova(object):
             RuntimeError: times out for waiting for response
 
         """
-        self._logger.debug('Command to be sent [%s]' % strcmd)
-        bytedata = bytearray("%s\r" % strcmd.strip(), 'utf8')
-        self._logger.debug('Acquiring blocking command lock for [%s]' % strcmd)
+        self._logger.debug('Command to be sent [{}]'.format(strcmd))
+        bytedata = bytearray("{}\r".format(strcmd.strip(), 'utf8'))
+        self._logger.debug('Acquiring blocking command lock for [{}]'.format(strcmd))
         PyAnova.cmd_lock.acquire(True)
         PyAnova.cb_resp = None
-        self._logger.debug('Acquiring callback condition lock for [%s]' % strcmd)
+        self._logger.debug('Acquiring callback condition lock for [{}]'.format(strcmd))
         PyAnova.cb_cond.acquire(True)
-        self._logger.debug('Writing %s to handle: 0x%x' % (strcmd, handle))
+        self._logger.debug('Writing {} to handle: 0x{:x}'.format(strcmd, handle))
         self._dev.char_write_handle(handle, bytedata)
         while not PyAnova.cb_resp:
-            self._logger.debug('Waiting for response from callback, timeout: %.2f' % cmd_timeout)
+            self._logger.debug('Waiting for response from callback, timeout: {:.2f}'.format(cmd_timeout))
             PyAnova.cb_cond.wait(cmd_timeout)
         self._logger.debug('Processing response from callback')
         if not PyAnova.cb_resp:
-            errmsg = 'Timed out waiting for callback for command [%s]' % strcmd
+            errmsg = 'Timed out waiting for callback for command [{}]'.format(strcmd)
             self._logger.error(errmsg)
             raise RuntimeError(errmsg)
-        self._logger.debug('Received response from callback: %s' % str(PyAnova.cb_resp))
+        self._logger.debug('Received response from callback: {}'.format(str(PyAnova.cb_resp)))
         resp = str(PyAnova.cb_resp['value']).strip()
         PyAnova.cb_resp = None
         PyAnova.cb_cond.release()
-        self._logger.debug('Released callback condition lock for [%s]' % strcmd)
+        self._logger.debug('Released callback condition lock for [{}]'.format(strcmd))
         PyAnova.cmd_lock.release()
-        self._logger.debug('Released command lock for [%s]' % strcmd)
+        self._logger.debug('Released command lock for [{}]'.format(strcmd))
         return resp
 
     # Read only functions (status getter and control setter)
@@ -320,18 +320,18 @@ class PyAnova(object):
     # setter functions (that takes in parameters)
     def set_calibration_factor(
             self, cal_factor, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_CALIBRATION_FACTOR % cal_factor, handle, timeout)
+        return self._write_strcmd(SET_CALIBRATION_FACTOR.format(cal_factor), handle, timeout)
 
     def set_temperature(self, target_temp, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_TARGET_TEMP % target_temp, handle, timeout)
+        return self._write_strcmd(SET_TARGET_TEMP.format(target_temp), handle, timeout)
 
     def set_timer(self, timer_minute, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_TIMER % timer_minute, handle, timeout)
+        return self._write_strcmd(SET_TIMER.format(timer_minute), handle, timeout)
 
     def set_unit(self, unit, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
         unit = unit.strip().lower()
         if unit != 'c' and unit != 'f': 
-            errmsg = 'Expected unit to be either \'c\' or \'f\', found: %s' % unit
+            errmsg = 'Expected unit to be either \'c\' or \'f\', found: {}'.format(unit)
             self._logger.error(errmsg)
             raise ValueError(errmsg)
-        return self._write_strcmd(SET_TEMP_UNIT % unit, handle, timeout)
+        return self._write_strcmd(SET_TEMP_UNIT.format(unit), handle, timeout)
