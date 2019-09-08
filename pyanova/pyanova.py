@@ -258,14 +258,14 @@ class PyAnova(object):
 
         """
         self._logger.debug('Command to be sent [{}]'.format(strcmd))
-        bytedata = bytearray("{}\r".format(strcmd.strip(), 'utf8'))
+        byte_data = "{}\r".format(strcmd.strip()).encode('utf8')
         self._logger.debug('Acquiring blocking command lock for [{}]'.format(strcmd))
         PyAnova.cmd_lock.acquire(True)
         PyAnova.cb_resp = None
         self._logger.debug('Acquiring callback condition lock for [{}]'.format(strcmd))
         PyAnova.cb_cond.acquire(True)
         self._logger.debug('Writing {} to handle: 0x{:x}'.format(strcmd, handle))
-        self._dev.char_write_handle(handle, bytedata)
+        self._dev.char_write_handle(handle, byte_data)
         while not PyAnova.cb_resp:
             self._logger.debug('Waiting for response from callback, timeout: {:.2f}'.format(cmd_timeout))
             PyAnova.cb_cond.wait(cmd_timeout)
