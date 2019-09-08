@@ -79,7 +79,7 @@ DEFAULT_TIMEOUT_SEC = 10
 DEFAULT_CMD_TIMEOUT_SEC = 5
 
 # Logging format
-DEFAULT_LOGGING_FORMATTER = logging.Formatter('{asctime} - {levelname} - {message}')
+DEFAULT_LOGGING_FORMATTER = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 DEFAULT_HANDLER = logging.StreamHandler()
 DEFAULT_HANDLER.setFormatter(DEFAULT_LOGGING_FORMATTER)
 DEFAULT_LOGGER = logging.getLogger('pyanova_default_logger')
