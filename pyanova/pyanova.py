@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- mode: python; coding: utf-8 -*-
+# -*- mode: python; encoding: utf-8 -*-
 
 # Copyright (C) 2017, c3V6a2Vy <c3V6a2Vy@protonmail.com>
 # This software is under the terms of Apache License v2 or later.
@@ -39,7 +39,7 @@ DEVICE_NOTIFICATION_CHAR_UUID = "0000ffe1-0000-1000-8000-00805f9b34fb"
 DEVICE_NOTIFICATION_CHAR_HANDLE = 0X25
 
 # Readers
-READ_DEVICE_STATUS = "status"            # stopped|running
+READ_DEVICE_STATUS = "status"          # stopped|running
 READ_CALIBRATION_FACTOR = "read cal"
 READ_TEMP_HISTORY = "read data"
 READ_TARGET_TEMP = "read set temp"
@@ -48,10 +48,10 @@ READ_TIMER = "read timer"
 READ_UNIT = "read unit"
 
 # Setters
-SET_CALIBRATION_FACTOR = "cal {:.1f}"      # def 0.0, [-9.9, 9.9]
-SET_TARGET_TEMP = "set temp {:.1f}"        # [5.0C, 99,9C] | [41.0F, 211.8F]
-SET_TIMER = "set timer {:d}"               # in minutes, [0, 6000]
-SET_TEMP_UNIT = "set unit {}"            # 'c'|'f'
+SET_CALIBRATION_FACTOR = "cal {:.1f}"  # def 0.0, [-9.9, 9.9]
+SET_TARGET_TEMP = "set temp {:.1f}"    # [5.0C, 99,9C] | [41.0F, 211.8F]
+SET_TIMER = "set timer {:d}"           # in minutes, [0, 6000]
+SET_TEMP_UNIT = "set unit {}"          # 'c'|'f'
 
 # Controllers
 CTL_START = "start"
@@ -235,7 +235,7 @@ class PyAnova(object):
         """
         return self._dev is not None
 
-    def _write_strcmd(self, strcmd, handle, cmd_timeout):
+    def _write_command(self, input_cmd, handle, cmd_timeout):
         """Thread-safe caller method that sends data to BLE device and wait for the response returns via notification
 
         There will be two level of locks: command lock and callback condition. The command lock would lock down so
@@ -246,7 +246,7 @@ class PyAnova(object):
         callback lock and the command lock would be released.
 
         Args:
-            strcmd (str): command in string
+            input_cmd (str): command in string
             handle (int): handle of the receiver to send to
             cmd_timeout (float): timeout for waiting for response
 
@@ -257,81 +257,81 @@ class PyAnova(object):
             RuntimeError: times out for waiting for response
 
         """
-        self._logger.debug('Command to be sent [{}]'.format(strcmd))
-        byte_data = "{}\r".format(strcmd.strip()).encode('utf8')
-        self._logger.debug('Acquiring blocking command lock for [{}]'.format(strcmd))
+        self._logger.debug('Command to be sent [{}]'.format(input_cmd))
+        byte_data = "{}\r".format(input_cmd.strip()).encode('utf8')
+        self._logger.debug('Acquiring blocking command lock for [{}]'.format(input_cmd))
         PyAnova.cmd_lock.acquire(True)
         PyAnova.cb_resp = None
-        self._logger.debug('Acquiring callback condition lock for [{}]'.format(strcmd))
+        self._logger.debug('Acquiring callback condition lock for [{}]'.format(input_cmd))
         PyAnova.cb_cond.acquire(True)
-        self._logger.debug('Writing {} to handle: 0x{:x}'.format(strcmd, handle))
+        self._logger.debug('Writing {} to handle: 0x{:x}'.format(input_cmd, handle))
         self._dev.char_write_handle(handle, byte_data)
         while not PyAnova.cb_resp:
             self._logger.debug('Waiting for response from callback, timeout: {:.2f}'.format(cmd_timeout))
             PyAnova.cb_cond.wait(cmd_timeout)
         self._logger.debug('Processing response from callback')
         if not PyAnova.cb_resp:
-            errmsg = 'Timed out waiting for callback for command [{}]'.format(strcmd)
+            errmsg = 'Timed out waiting for callback for command [{}]'.format(input_cmd)
             self._logger.error(errmsg)
             raise RuntimeError(errmsg)
         self._logger.debug('Received response from callback: {}'.format(str(PyAnova.cb_resp)))
         resp = str(PyAnova.cb_resp['value']).strip()
         PyAnova.cb_resp = None
         PyAnova.cb_cond.release()
-        self._logger.debug('Released callback condition lock for [{}]'.format(strcmd))
+        self._logger.debug('Released callback condition lock for [{}]'.format(input_cmd))
         PyAnova.cmd_lock.release()
-        self._logger.debug('Released command lock for [{}]'.format(strcmd))
+        self._logger.debug('Released command lock for [{}]'.format(input_cmd))
         return resp
 
     # Read only functions (status getter and control setter)
     def get_status(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_DEVICE_STATUS, handle, timeout)
+        return self._write_command(READ_DEVICE_STATUS, handle, timeout)
 
     def get_calibration_factor(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_CALIBRATION_FACTOR, handle, timeout)
+        return self._write_command(READ_CALIBRATION_FACTOR, handle, timeout)
 
     def get_temperature_history(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_TEMP_HISTORY, handle, timeout).split()
+        return self._write_command(READ_TEMP_HISTORY, handle, timeout).split()
 
     def get_target_temperature(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_TARGET_TEMP, handle, timeout)
+        return self._write_command(READ_TARGET_TEMP, handle, timeout)
 
     def get_current_temperature(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_CURRENT_TEMP, handle, timeout)
+        return self._write_command(READ_CURRENT_TEMP, handle, timeout)
 
     def get_timer(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_TIMER, handle, timeout)
+        return self._write_command(READ_TIMER, handle, timeout)
 
     def get_unit(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(READ_UNIT, handle, timeout)
+        return self._write_command(READ_UNIT, handle, timeout)
 
     def stop_anova(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(CTL_STOP, handle, timeout)
+        return self._write_command(CTL_STOP, handle, timeout)
 
     def start_anova(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(CTL_START, handle, timeout)
+        return self._write_command(CTL_START, handle, timeout)
 
     def stop_timer(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(CTL_TIMER_STOP, handle, timeout)
+        return self._write_command(CTL_TIMER_STOP, handle, timeout)
 
     def start_timer(self, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(CTL_TIMER_START, handle, timeout)
+        return self._write_command(CTL_TIMER_START, handle, timeout)
 
     # setter functions (that takes in parameters)
     def set_calibration_factor(
             self, cal_factor, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_CALIBRATION_FACTOR.format(cal_factor), handle, timeout)
+        return self._write_command(SET_CALIBRATION_FACTOR.format(cal_factor), handle, timeout)
 
     def set_temperature(self, target_temp, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_TARGET_TEMP.format(target_temp), handle, timeout)
+        return self._write_command(SET_TARGET_TEMP.format(target_temp), handle, timeout)
 
     def set_timer(self, timer_minute, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
-        return self._write_strcmd(SET_TIMER.format(timer_minute), handle, timeout)
+        return self._write_command(SET_TIMER.format(timer_minute), handle, timeout)
 
     def set_unit(self, unit, handle=DEVICE_NOTIFICATION_CHAR_HANDLE, timeout=DEFAULT_CMD_TIMEOUT_SEC):
         unit = unit.strip().lower()
-        if unit != 'c' and unit != 'f': 
+        if unit != 'c' and unit != 'f':
             errmsg = 'Expected unit to be either \'c\' or \'f\', found: {}'.format(unit)
             self._logger.error(errmsg)
             raise ValueError(errmsg)
-        return self._write_strcmd(SET_TEMP_UNIT.format(unit), handle, timeout)
+        return self._write_command(SET_TEMP_UNIT.format(unit), handle, timeout)
